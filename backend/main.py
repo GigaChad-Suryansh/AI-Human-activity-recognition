@@ -16,19 +16,20 @@ from ultralytics import YOLO
 
 from har import TemporalHAR
 from training_api import router as dataset_router
+from experiment_api import router as experiment_router
 
 ROOT = Path(__file__).resolve().parent.parent
 MODEL_DIR = ROOT / "models"
 MODEL_DIR.mkdir(exist_ok=True)
 
-app = FastAPI(title="Space Experiment AI Edge API", version="1.4.0")
+app = FastAPI(title="Space Experiment AI Edge API", version="1.5.0")
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_credentials=True, allow_methods=["*"], allow_headers=["*"])
 app.include_router(dataset_router)
+app.include_router(experiment_router)
 
 object_model = YOLO("yolo11n.pt")
 pose_model = YOLO("yolo11n-pose.pt")
 HAR_MODEL = MODEL_DIR / "experiment_har.pt"
-LABELS = ["Pick up container", "Open container", "Insert tool", "Transfer sample", "Close container", "Place container back"]
 motion_history: deque[float] = deque(maxlen=20)
 
 @app.get("/", include_in_schema=False)
@@ -107,13 +108,13 @@ def infer(frame: np.ndarray, har: TemporalHAR) -> dict[str, Any]:
 
 @app.get("/health")
 def health() -> dict[str, Any]:
-    return {"status": "ok", "object_model": "yolo11n.pt", "pose_model": "yolo11n-pose.pt", "har": "trained-LSTM" if HAR_MODEL.exists() else "temporal-baseline", "dataset": "enabled", "dashboard": "http://localhost:8000/", "websocket": "ws://localhost:8000/ws/inference"}
+    return {"status": "ok", "object_model": "yolo11n.pt", "pose_model": "yolo11n-pose.pt", "har": "trained-LSTM" if HAR_MODEL.exists() else "temporal-baseline", "dataset": "enabled", "experiments": "configurable", "dashboard": "http://localhost:8000/", "websocket": "ws://localhost:8000/ws/inference"}
 
 @app.websocket("/ws/inference")
 async def inference_socket(websocket: WebSocket) -> None:
     await websocket.accept()
-    har = TemporalHAR(window=20, model_path=HAR_MODEL)
     try:
+        har = TemporalHAR(window=20, model_path=HAR_MODEL)
         while True:
             payload = await websocket.receive_text()
             try:
