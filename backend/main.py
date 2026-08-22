@@ -14,21 +14,15 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from ultralytics import YOLO
 
+from har import TemporalHAR
+
 ROOT = Path(__file__).resolve().parent.parent
 MODEL_DIR = ROOT / "models"
 MODEL_DIR.mkdir(exist_ok=True)
 
-app = FastAPI(title="Space Experiment AI Edge API", version="1.1.0")
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+app = FastAPI(title="Space Experiment AI Edge API", version="1.2.0")
+app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_credentials=True, allow_methods=["*"], allow_headers=["*"])
 
-# Pretrained models are downloaded automatically by Ultralytics on first run.
-# For the SIH deployment, replace these with custom experiment weights.
 object_model = YOLO("yolo11n.pt")
 pose_model = YOLO("yolo11n-pose.pt")
 
@@ -40,27 +34,19 @@ LABELS = [
     "Close container",
     "Place container back",
 ]
-
 motion_history: deque[float] = deque(maxlen=20)
 
-
-# Serve the exact same dashboard from the edge computer. This avoids the
-# GitHub-Pages-to-localhost WebSocket problem and makes localhost:8000 the
-# single origin for UI + API + WebSocket during development/demo.
 @app.get("/", include_in_schema=False)
 def dashboard() -> FileResponse:
     return FileResponse(ROOT / "index.html", media_type="text/html")
-
 
 @app.get("/app.js", include_in_schema=False)
 def frontend_js() -> FileResponse:
     return FileResponse(ROOT / "app.js", media_type="text/javascript")
 
-
 @app.get("/styles.css", include_in_schema=False)
 def frontend_css() -> FileResponse:
     return FileResponse(ROOT / "styles.css", media_type="text/css")
-
 
 def decode_frame(payload: str) -> np.ndarray:
     if payload.startswith("data:"):
@@ -71,38 +57,26 @@ def decode_frame(payload: str) -> np.ndarray:
         raise ValueError("Invalid JPEG frame")
     return frame
 
-
 def box_center(box: list[float]) -> tuple[float, float]:
     x1, y1, x2, y2 = box
     return ((x1 + x2) / 2, (y1 + y2) / 2)
 
-
 def distance(a: tuple[float, float], b: tuple[float, float]) -> float:
     return float(np.hypot(a[0] - b[0], a[1] - b[1]))
 
-
-def infer(frame: np.ndarray) -> dict[str, Any]:
+def infer(frame: np.ndarray, har: TemporalHAR) -> dict[str, Any]:
     started = time.perf_counter()
     h, w = frame.shape[:2]
-
     detection = object_model.predict(frame, verbose=False, conf=0.35, imgsz=640)[0]
     pose = pose_model.predict(frame, verbose=False, conf=0.35, imgsz=640)[0]
 
     objects: list[dict[str, Any]] = []
     if detection.boxes is not None:
         names = detection.names
-        for box, conf, cls in zip(
-            detection.boxes.xyxy.cpu().tolist(),
-            detection.boxes.conf.cpu().tolist(),
-            detection.boxes.cls.cpu().tolist(),
-        ):
+        for box, conf, cls in zip(detection.boxes.xyxy.cpu().tolist(), detection.boxes.conf.cpu().tolist(), detection.boxes.cls.cpu().tolist()):
             label = names[int(cls)]
             if label in {"person", "bottle", "cup", "book", "scissors", "knife", "cell phone", "backpack", "suitcase", "sports ball"}:
-                objects.append({
-                    "label": label,
-                    "confidence": round(float(conf), 3),
-                    "box": [round(float(v), 1) for v in box],
-                })
+                objects.append({"label": label, "confidence": round(float(conf), 3), "box": [round(float(v), 1) for v in box]})
 
     persons = [o for o in objects if o["label"] == "person"]
     hands: list[dict[str, Any]] = []
@@ -131,78 +105,49 @@ def infer(frame: np.ndarray) -> dict[str, Any]:
             d, hand, obj = best
             threshold = max(70.0, min(w, h) * 0.16)
             if d <= threshold:
-                interaction = {
-                    "hand": hand["side"],
-                    "object": obj["label"],
-                    "distance_px": round(d, 1),
-                    "confidence": round(max(0.0, 1.0 - d / threshold) * min(hand["confidence"], obj["confidence"]), 3),
-                }
+                interaction = {"hand": hand["side"], "object": obj["label"], "distance_px": round(d, 1), "confidence": round(max(0.0, 1.0 - d / threshold) * min(hand["confidence"], obj["confidence"]), 3)}
 
     gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
     small = cv2.resize(gray, (64, 36))
     motion = float(np.mean(cv2.Laplacian(small, cv2.CV_32F) ** 2) ** 0.5)
     motion_history.append(motion)
 
-    if interaction:
-        obj = interaction["object"]
-        if obj in {"bottle", "cup"}:
-            activity = "Pick up container"
-        elif obj in {"scissors", "knife"}:
-            activity = "Insert tool"
-        else:
-            activity = "Hand-object interaction"
-        activity_conf = interaction["confidence"]
-    else:
-        activity = "No interaction detected"
-        activity_conf = 0.0
-
-    latency = (time.perf_counter() - started) * 1000
-    return {
-        "type": "inference",
-        "timestamp": time.time(),
-        "frame_width": w,
-        "frame_height": h,
-        "persons": len(persons),
-        "objects": len(objects),
-        "detections": objects,
-        "hands": hands,
-        "interaction": interaction,
-        "activity": activity,
-        "confidence": round(float(activity_conf), 3),
-        "motion": round(motion, 3),
-        "latency_ms": round(latency, 1),
-        "model": "YOLO11 object + YOLO11 pose",
-        "har_mode": "interaction heuristic (replace with temporal HAR)",
+    result: dict[str, Any] = {
+        "frame_width": w, "frame_height": h, "persons": len(persons), "objects": len(objects),
+        "detections": objects, "hands": hands, "interaction": interaction, "motion": round(motion, 3),
     }
+    prediction = har.update(result)
+    latency = (time.perf_counter() - started) * 1000
 
+    return {
+        "type": "inference", "timestamp": time.time(), "frame_width": w, "frame_height": h,
+        "persons": len(persons), "objects": len(objects), "detections": objects, "hands": hands,
+        "interaction": interaction, "activity": prediction.label, "confidence": prediction.confidence,
+        "motion": round(motion, 3), "latency_ms": round(latency, 1),
+        "model": "YOLO11 object + YOLO11 pose + temporal HAR baseline",
+        "har_mode": prediction.mode,
+    }
 
 @app.get("/health")
 def health() -> dict[str, Any]:
-    return {
-        "status": "ok",
-        "object_model": "yolo11n.pt",
-        "pose_model": "yolo11n-pose.pt",
-        "dashboard": "http://localhost:8000/",
-        "websocket": "ws://localhost:8000/ws/inference",
-    }
-
+    return {"status": "ok", "object_model": "yolo11n.pt", "pose_model": "yolo11n-pose.pt", "har": "temporal-baseline", "dashboard": "http://localhost:8000/", "websocket": "ws://localhost:8000/ws/inference"}
 
 @app.websocket("/ws/inference")
 async def inference_socket(websocket: WebSocket) -> None:
     await websocket.accept()
+    har = TemporalHAR(window=20)
     try:
         while True:
             payload = await websocket.receive_text()
             try:
                 message = json.loads(payload)
                 frame = decode_frame(message["frame"])
-                result = infer(frame)
+                result = infer(frame, har)
                 await websocket.send_text(json.dumps(result))
             except Exception as exc:
                 await websocket.send_text(json.dumps({"type": "error", "message": str(exc)}))
     except WebSocketDisconnect:
         return
-
 
 if __name__ == "__main__":
     import uvicorn
