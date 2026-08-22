@@ -1,58 +1,15 @@
 <!doctype html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="theme-color" content="#07111f" />
-  <title>Space Experiment AI</title>
-  <link rel="stylesheet" href="styles.css" />
-</head>
+<head><meta charset="UTF-8" /><meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="theme-color" content="#07111f" /><title>Space Experiment AI</title><link rel="stylesheet" href="styles.css" /></head>
 <body>
-  <header class="topbar">
-    <div class="brand"><div class="logo">SA</div><div><h1>SPACE EXPERIMENT AI</h1><p>Human Activity Recognition · Edge Monitoring Console</p></div></div>
-    <div class="top-actions"><span id="systemPill" class="pill good"><i></i> SYSTEM READY</span><button id="fullscreenBtn" class="icon-btn" title="Fullscreen">⛶</button></div>
-  </header>
-
-  <main class="app-shell">
-    <section class="hero-row">
-      <div><div class="eyebrow">MISSION DEMO / EXP-DEMO-001</div><h2>Experiment Execution Monitor</h2><p>Process camera input locally, validate the predefined experiment sequence, and issue voice alerts for protocol violations.</p></div>
-      <div class="hero-actions"><button id="startBtn" class="btn primary">▶ Start Experiment</button><button id="resetBtn" class="btn">↺ Reset</button></div>
-    </section>
-
-    <section class="main-grid">
-      <article class="card video-card">
-        <div class="card-head"><div><h3>Live Camera</h3><span id="cameraStatus">Camera idle</span></div><div class="mini-status"><span class="dot"></span><span id="fpsText">30 FPS</span></div></div>
-        <div class="video-wrap">
-          <video id="camera" autoplay muted playsinline></video>
-          <canvas id="overlay"></canvas>
-          <div id="cameraPlaceholder" class="camera-placeholder"><div class="camera-icon">◉</div><b>Camera input ready</b><span>Press Start Experiment and allow camera access.</span></div>
-          <div class="hud top-left">CAM-01<br><span>LOCAL PROCESSING</span></div>
-          <div class="hud top-right"><span class="rec-dot"></span> LIVE</div>
-          <div class="hud bottom-left" id="aiHud">AI: STANDBY</div>
-        </div>
-        <div class="video-controls"><button id="cameraBtn" class="btn">Start Camera</button><button id="snapshotBtn" class="btn">Capture</button><label class="btn file-btn">Load Video<input id="videoFile" type="file" accept="video/*" /></label></div>
-      </article>
-
-      <aside class="right-stack">
-        <article class="card state-card"><div class="card-head"><h3>Experiment State</h3><span id="stateBadge" class="badge neutral">STANDBY</span></div><div id="stepList" class="step-list"></div><div class="next-box"><span>NEXT RECOMMENDED STEP</span><strong id="nextStep">Start experiment</strong></div></article>
-        <article class="card interpretation"><div class="card-head"><h3>AI Interpretation</h3><span class="badge blue">EDGE AI</span></div><div class="interpret-grid"><div><small>Detected Activity</small><strong id="activity">—</strong></div><div><small>Expected Activity</small><strong id="expected">—</strong></div><div><small>Hand / Object</small><strong id="interaction">—</strong></div><div><small>Sequence</small><strong id="sequence" class="green-text">—</strong></div></div><div class="confidence-row"><div><span>Confidence</span><b id="confidence">0%</b></div><div class="progress"><i id="confidenceBar"></i></div></div></article>
-      </aside>
-    </section>
-
-    <section class="metrics-grid">
-      <div class="metric card"><span>Inference latency</span><b id="latency">—</b><small>Local pipeline</small></div>
-      <div class="metric card"><span>Tracked persons</span><b id="persons">0</b><small>Pose / detection</small></div>
-      <div class="metric card"><span>Objects detected</span><b id="objects">0</b><small>Experiment equipment</small></div>
-      <div class="metric card"><span>Network</span><b id="network">OFFLINE</b><small>No cloud inference</small></div>
-    </section>
-
-    <section class="lower-grid">
-      <article class="card log-card"><div class="card-head"><h3>Timestamped Experiment Log</h3><button id="downloadLog" class="btn small">↓ Export JSONL</button></div><div id="eventLog" class="event-log"></div></article>
-      <article class="card output-card"><div class="card-head"><h3>Mission Outputs</h3><span class="badge green">LOCAL STORAGE</span></div><div class="output-row"><span>Video recording</span><b id="recordStatus">READY</b></div><div class="output-row"><span>Structured log</span><b>events.jsonl</b></div><div class="output-row"><span>Summary</span><b>summary.txt</b></div><div class="output-row"><span>IP stream</span><b>RTSP / WebRTC ready</b></div><div class="voice-box"><span>🔊 Voice alert</span><b id="voiceStatus">READY</b></div></article>
-    </section>
-  </main>
-
-  <div id="toast" class="toast"></div>
-  <script src="app.js"></script>
-</body>
-</html>
+<header class="topbar"><div class="brand"><div class="logo">SA</div><div><h1>SPACE EXPERIMENT AI</h1><p>Human Activity Recognition · Edge Monitoring Console</p></div></div><div class="top-actions"><span id="systemPill" class="pill good"><i></i> SYSTEM READY</span><button id="fullscreenBtn" class="icon-btn" title="Fullscreen">⛶</button></div></header>
+<main class="app-shell">
+<section class="hero-row"><div><div class="eyebrow">MISSION DEMO / EXP-DEMO-001</div><h2>Experiment Execution Monitor</h2><p>Process camera input locally, validate the predefined experiment sequence, and issue voice alerts for protocol violations.</p></div><div class="hero-actions"><button id="startBtn" class="btn primary">▶ Start Experiment</button><button id="resetBtn" class="btn">↺ Reset</button></div></section>
+<section class="main-grid">
+<article class="card video-card"><div class="card-head"><div><h3>Live Camera</h3><span id="cameraStatus">Camera idle</span></div><div class="mini-status"><span class="dot"></span><span id="fpsText">30 FPS</span></div></div><div class="video-wrap"><video id="camera" autoplay muted playsinline></video><canvas id="overlay"></canvas><div id="cameraPlaceholder" class="camera-placeholder"><div class="camera-icon">◉</div><b>Camera input ready</b><span>Press Start Experiment and allow camera access.</span></div><div class="hud top-left">CAM-01<br><span>LOCAL PROCESSING</span></div><div class="hud top-right"><span class="rec-dot"></span> LIVE</div><div class="hud bottom-left" id="aiHud">AI: STANDBY</div></div><div class="video-controls"><button id="cameraBtn" class="btn">Start Camera</button><button id="snapshotBtn" class="btn">Capture</button><label class="btn file-btn">Load Video<input id="videoFile" type="file" accept="video/*" /></label></div></article>
+<aside class="right-stack"><article class="card state-card"><div class="card-head"><h3>Experiment State</h3><span id="stateBadge" class="badge neutral">STANDBY</span></div><div id="stepList" class="step-list"></div><div class="next-box"><span>NEXT RECOMMENDED STEP</span><strong id="nextStep">Start experiment</strong></div></article><article class="card interpretation"><div class="card-head"><h3>AI Interpretation</h3><span class="badge blue">EDGE AI</span></div><div class="interpret-grid"><div><small>Detected Activity</small><strong id="activity">—</strong></div><div><small>Expected Activity</small><strong id="expected">—</strong></div><div><small>Hand / Object</small><strong id="interaction">—</strong></div><div><small>Sequence</small><strong id="sequence" class="green-text">—</strong></div></div><div class="confidence-row"><div><span>Confidence</span><b id="confidence">0%</b></div><div class="progress"><i id="confidenceBar"></i></div></div></article></aside>
+</section>
+<section class="card" style="margin-top:18px;padding:18px"><div class="card-head"><div><h3>HAR Training Recorder</h3><span>Collect labeled temporal sequences locally for the six experiment actions.</span></div><span id="datasetStats" class="badge neutral">0 samples</span></div><div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:14px"><select id="trainingLabel" class="btn" style="min-width:220px"><option>Pick up container</option><option>Open container</option><option>Insert tool</option><option>Transfer sample</option><option>Close container</option><option>Place container back</option></select><button id="recordTrainingBtn" class="btn primary">● Start Training Sample</button><span id="trainingStatus">Ready — choose an action, perform it clearly, then stop.</span></div><div style="margin-top:10px;font-size:12px;opacity:.75">Aim for 5–10+ sequences per action initially. The recorder saves temporal features from the same YOLO + pose pipeline used during inference.</div></section>
+<section class="metrics-grid"><div class="metric card"><span>Inference latency</span><b id="latency">—</b><small>Local pipeline</small></div><div class="metric card"><span>Tracked persons</span><b id="persons">0</b><small>Pose / detection</small></div><div class="metric card"><span>Objects detected</span><b id="objects">0</b><small>Experiment equipment</small></div><div class="metric card"><span>Network</span><b id="network">OFFLINE</b><small>No cloud inference</small></div></section>
+<section class="lower-grid"><article class="card log-card"><div class="card-head"><h3>Timestamped Experiment Log</h3><button id="downloadLog" class="btn small">↓ Export JSONL</button></div><div id="eventLog" class="event-log"></div></article><article class="card output-card"><div class="card-head"><h3>Mission Outputs</h3><span class="badge green">LOCAL STORAGE</span></div><div class="output-row"><span>Video recording</span><b id="recordStatus">READY</b></div><div class="output-row"><span>Structured log</span><b>events.jsonl</b></div><div class="output-row"><span>Summary</span><b>summary.txt</b></div><div class="output-row"><span>IP stream</span><b>RTSP / WebRTC ready</b></div><div class="voice-box"><span>🔊 Voice alert</span><b id="voiceStatus">READY</b></div></article></section>
+</main><div id="toast" class="toast"></div><script src="app.js"></script></body></html>
