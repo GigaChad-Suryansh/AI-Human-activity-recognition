@@ -11,13 +11,14 @@ import cv2
 import numpy as np
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
 from ultralytics import YOLO
 
 ROOT = Path(__file__).resolve().parent.parent
 MODEL_DIR = ROOT / "models"
 MODEL_DIR.mkdir(exist_ok=True)
 
-app = FastAPI(title="Space Experiment AI Edge API", version="1.0.0")
+app = FastAPI(title="Space Experiment AI Edge API", version="1.1.0")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -27,7 +28,7 @@ app.add_middleware(
 )
 
 # Pretrained models are downloaded automatically by Ultralytics on first run.
-# For the SIH deployment, replace these with your custom experiment weights.
+# For the SIH deployment, replace these with custom experiment weights.
 object_model = YOLO("yolo11n.pt")
 pose_model = YOLO("yolo11n-pose.pt")
 
@@ -40,9 +41,25 @@ LABELS = [
     "Place container back",
 ]
 
-# A short motion history gives us a stable demo activity estimate without
-# pretending that a real temporal HAR model has already been trained.
 motion_history: deque[float] = deque(maxlen=20)
+
+
+# Serve the exact same dashboard from the edge computer. This avoids the
+# GitHub-Pages-to-localhost WebSocket problem and makes localhost:8000 the
+# single origin for UI + API + WebSocket during development/demo.
+@app.get("/", include_in_schema=False)
+def dashboard() -> FileResponse:
+    return FileResponse(ROOT / "index.html", media_type="text/html")
+
+
+@app.get("/app.js", include_in_schema=False)
+def frontend_js() -> FileResponse:
+    return FileResponse(ROOT / "app.js", media_type="text/javascript")
+
+
+@app.get("/styles.css", include_in_schema=False)
+def frontend_css() -> FileResponse:
+    return FileResponse(ROOT / "styles.css", media_type="text/css")
 
 
 def decode_frame(payload: str) -> np.ndarray:
@@ -80,8 +97,6 @@ def infer(frame: np.ndarray) -> dict[str, Any]:
             detection.boxes.cls.cpu().tolist(),
         ):
             label = names[int(cls)]
-            # Keep useful classes for the prototype. Custom labels can be added
-            # when the experiment dataset/model is trained.
             if label in {"person", "bottle", "cup", "book", "scissors", "knife", "cell phone", "backpack", "suitcase", "sports ball"}:
                 objects.append({
                     "label": label,
@@ -94,7 +109,6 @@ def infer(frame: np.ndarray) -> dict[str, Any]:
     if pose.keypoints is not None and len(pose.keypoints) > 0:
         pts = pose.keypoints.xy.cpu().numpy()
         confs = pose.keypoints.conf.cpu().numpy() if pose.keypoints.conf is not None else None
-        # COCO pose indices: 9=left wrist, 10=right wrist.
         for p_idx, person_points in enumerate(pts):
             for side, idx in (("left", 9), ("right", 10)):
                 if idx >= len(person_points):
@@ -104,9 +118,6 @@ def infer(frame: np.ndarray) -> dict[str, Any]:
                 if c >= 0.35:
                     hands.append({"side": side, "x": round(float(x), 1), "y": round(float(y), 1), "confidence": round(c, 3)})
 
-    # Interaction heuristic: associate the closest visible wrist with the
-    # nearest non-person object. This is intentionally explicit and replaceable
-    # by a learned hand-object interaction model later.
     interaction = None
     if hands:
         candidates = [o for o in objects if o["label"] != "person"]
@@ -127,8 +138,6 @@ def infer(frame: np.ndarray) -> dict[str, Any]:
                     "confidence": round(max(0.0, 1.0 - d / threshold) * min(hand["confidence"], obj["confidence"]), 3),
                 }
 
-    # Simple motion signal. It is not a trained HAR classifier; it provides a
-    # deterministic bridge until the team's temporal model is supplied.
     gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
     small = cv2.resize(gray, (64, 36))
     motion = float(np.mean(cv2.Laplacian(small, cv2.CV_32F) ** 2) ** 0.5)
@@ -167,14 +176,15 @@ def infer(frame: np.ndarray) -> dict[str, Any]:
     }
 
 
-@app.get("/")
-def root() -> dict[str, str]:
-    return {"service": "Space Experiment AI Edge API", "status": "ready"}
-
-
 @app.get("/health")
 def health() -> dict[str, Any]:
-    return {"status": "ok", "object_model": "yolo11n.pt", "pose_model": "yolo11n-pose.pt"}
+    return {
+        "status": "ok",
+        "object_model": "yolo11n.pt",
+        "pose_model": "yolo11n-pose.pt",
+        "dashboard": "http://localhost:8000/",
+        "websocket": "ws://localhost:8000/ws/inference",
+    }
 
 
 @app.websocket("/ws/inference")
