@@ -44,6 +44,14 @@ def frontend_js() -> FileResponse:
 def frontend_css() -> FileResponse:
     return FileResponse(ROOT / "styles.css", media_type="text/css")
 
+@app.get("/training.js", include_in_schema=False)
+def training_js() -> FileResponse:
+    return FileResponse(ROOT / "training.js", media_type="text/javascript")
+
+@app.get("/experiment-builder.js", include_in_schema=False)
+def experiment_builder_js() -> FileResponse:
+    return FileResponse(ROOT / "experiment-builder.js", media_type="text/javascript")
+
 def decode_frame(payload: str) -> np.ndarray:
     if payload.startswith("data:"):
         payload = payload.split(",", 1)[1]
