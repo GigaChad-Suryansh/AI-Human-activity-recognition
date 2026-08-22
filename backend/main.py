@@ -20,19 +20,16 @@ ROOT = Path(__file__).resolve().parent.parent
 MODEL_DIR = ROOT / "models"
 MODEL_DIR.mkdir(exist_ok=True)
 
-app = FastAPI(title="Space Experiment AI Edge API", version="1.2.0")
+app = FastAPI(title="Space Experiment AI Edge API", version="1.3.0")
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_credentials=True, allow_methods=["*"], allow_headers=["*"])
 
 object_model = YOLO("yolo11n.pt")
 pose_model = YOLO("yolo11n-pose.pt")
+HAR_MODEL = MODEL_DIR / "experiment_har.pt"
 
 LABELS = [
-    "Pick up container",
-    "Open container",
-    "Insert tool",
-    "Transfer sample",
-    "Close container",
-    "Place container back",
+    "Pick up container", "Open container", "Insert tool",
+    "Transfer sample", "Close container", "Place container back",
 ]
 motion_history: deque[float] = deque(maxlen=20)
 
@@ -112,38 +109,26 @@ def infer(frame: np.ndarray, har: TemporalHAR) -> dict[str, Any]:
     motion = float(np.mean(cv2.Laplacian(small, cv2.CV_32F) ** 2) ** 0.5)
     motion_history.append(motion)
 
-    result: dict[str, Any] = {
-        "frame_width": w, "frame_height": h, "persons": len(persons), "objects": len(objects),
-        "detections": objects, "hands": hands, "interaction": interaction, "motion": round(motion, 3),
-    }
-    prediction = har.update(result)
+    base_result: dict[str, Any] = {"frame_width": w, "frame_height": h, "persons": len(persons), "objects": len(objects), "detections": objects, "hands": hands, "interaction": interaction, "motion": round(motion, 3)}
+    prediction = har.update(base_result)
     latency = (time.perf_counter() - started) * 1000
-
-    return {
-        "type": "inference", "timestamp": time.time(), "frame_width": w, "frame_height": h,
-        "persons": len(persons), "objects": len(objects), "detections": objects, "hands": hands,
-        "interaction": interaction, "activity": prediction.label, "confidence": prediction.confidence,
-        "motion": round(motion, 3), "latency_ms": round(latency, 1),
-        "model": "YOLO11 object + YOLO11 pose + temporal HAR baseline",
-        "har_mode": prediction.mode,
-    }
+    return {**base_result, "type": "inference", "timestamp": time.time(), "activity": prediction.label, "confidence": prediction.confidence, "latency_ms": round(latency, 1), "model": "YOLO11 object + YOLO11 pose + " + prediction.mode, "har_mode": prediction.mode}
 
 @app.get("/health")
 def health() -> dict[str, Any]:
-    return {"status": "ok", "object_model": "yolo11n.pt", "pose_model": "yolo11n-pose.pt", "har": "temporal-baseline", "dashboard": "http://localhost:8000/", "websocket": "ws://localhost:8000/ws/inference"}
+    return {"status": "ok", "object_model": "yolo11n.pt", "pose_model": "yolo11n-pose.pt", "har": "trained-LSTM" if HAR_MODEL.exists() else "temporal-baseline", "dashboard": "http://localhost:8000/", "websocket": "ws://localhost:8000/ws/inference"}
 
 @app.websocket("/ws/inference")
 async def inference_socket(websocket: WebSocket) -> None:
     await websocket.accept()
-    har = TemporalHAR(window=20)
+    har = TemporalHAR(window=20, model_path=HAR_MODEL)
     try:
         while True:
             payload = await websocket.receive_text()
             try:
                 message = json.loads(payload)
                 frame = decode_frame(message["frame"])
-                result = infer(frame, har)
-                await websocket.send_text(json.dumps(result))
+                await websocket.send_text(json.dumps(infer(frame, har)))
             except Exception as exc:
                 await websocket.send_text(json.dumps({"type": "error", "message": str(exc)}))
     except WebSocketDisconnect:
