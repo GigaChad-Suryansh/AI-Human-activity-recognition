@@ -12,6 +12,7 @@ import numpy as np
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
 from ultralytics import YOLO
 
 from har import TemporalHAR
@@ -22,7 +23,7 @@ ROOT = Path(__file__).resolve().parent.parent
 MODEL_DIR = ROOT / "models"
 MODEL_DIR.mkdir(exist_ok=True)
 
-app = FastAPI(title="Space Experiment AI Edge API", version="1.5.0")
+app = FastAPI(title="Space Experiment AI Edge API", version="1.5.1")
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_credentials=True, allow_methods=["*"], allow_headers=["*"])
 app.include_router(dataset_router)
 app.include_router(experiment_router)
@@ -51,6 +52,11 @@ def training_js() -> FileResponse:
 @app.get("/experiment-builder.js", include_in_schema=False)
 def experiment_builder_js() -> FileResponse:
     return FileResponse(ROOT / "experiment-builder.js", media_type="text/javascript")
+
+# Fallback static serving keeps root-level frontend assets available even when
+# the dashboard is opened through a local FastAPI server. API/WebSocket routes
+# are declared above this mount and therefore continue to take precedence.
+app.mount("/", StaticFiles(directory=ROOT, html=False), name="frontend-assets")
 
 def decode_frame(payload: str) -> np.ndarray:
     if payload.startswith("data:"):
