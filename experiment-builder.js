@@ -65,7 +65,15 @@
 
   $('addStepBtn').onclick=()=>{add();status('New step added — name it and review it.');};
   $('saveExperimentBtn').onclick=save;
-  $('suggestStepsBtn').onclick=suggest;
+
+  // Replace the suggest button before binding it. This prevents duplicate/stale
+  // click listeners if the frontend script is ever executed more than once.
+  const suggestButton=$('suggestStepsBtn');
+  if(suggestButton){
+    const freshSuggestButton=suggestButton.cloneNode(true);
+    suggestButton.replaceWith(freshSuggestButton);
+    freshSuggestButton.onclick=suggest;
+  }
 
   // Default demo protocol. AI suggestions can replace these steps at any time.
   add({name:'Pick up container'});
