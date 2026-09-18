@@ -1,0 +1,10 @@
+services:
+  - type: web
+    name: ai-human-activity-recognition-api
+    runtime: docker
+    plan: free
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /health
+    envVars:
+      - key: FRONTEND_ORIGIN
+        value: https://gigachad-suryansh.github.io
