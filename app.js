@@ -101,8 +101,34 @@ function drawOverlay(r){const canvas=$('overlay'),v=$('camera');if(!v.videoWidth
 async function startCamera(){
   if(state.videoURL){state.inputMode='video';const v=$('camera');$('cameraPlaceholder').style.display='none';$('cameraBtn').textContent='Video Loaded';$('cameraStatus').textContent='Video file input';connectBackend();try{await v.play();log('Video playback started — using loaded video as AI input');}catch(e){log('Video playback requires Play — use the video controls','warn');}return;}
   if(state.stream){stopCamera();return;}
-  try{state.stream=await navigator.mediaDevices.getUserMedia({video:{width:{ideal:1280},height:{ideal:720},facingMode:'user'},audio:false});state.inputMode='camera';$('camera').srcObject=state.stream;$('cameraPlaceholder').style.display='none';$('cameraBtn').textContent='Stop Camera';$('cameraStatus').textContent='Camera connected';log('Camera connected — local video input active');connectBackend();}
-  catch(e){$('cameraStatus').textContent='Camera unavailable';toast('Camera hardware/permission unavailable');log(`Camera unavailable: ${e.name||e.message}`,'warn');}
+  if(!navigator.mediaDevices?.getUserMedia){
+    $('cameraStatus').textContent='Camera unsupported';
+    toast('Camera requires HTTPS and browser permission');
+    log('Camera unavailable: getUserMedia is not available on this page','bad');
+    return;
+  }
+  try{
+    $('cameraStatus').textContent='Requesting camera…';
+    const constraints={video:{width:{ideal:1280},height:{ideal:720}},audio:false};
+    state.stream=await navigator.mediaDevices.getUserMedia(constraints);
+    const v=$('camera');
+    v.srcObject=state.stream;
+    v.muted=true;
+    v.autoplay=true;
+    v.playsInline=true;
+    $('cameraPlaceholder').style.display='none';
+    $('cameraBtn').textContent='Stop Camera';
+    $('cameraStatus').textContent='Camera connected';
+    state.inputMode='camera';
+    try{await v.play();}catch(playErr){log(`Camera stream received, but video playback was blocked: ${playErr.message}`,'warn');}
+    log('Camera connected — local video input active');
+    connectBackend();
+  }catch(e){
+    state.stream=null;
+    $('cameraStatus').textContent='Camera unavailable';
+    toast('Allow camera access, then try again');
+    log(`Camera unavailable: ${e.name||'Error'} — ${e.message||'No permission/device available'}`,'bad');
+  }
 }
 function stopCamera(){if(state.stream){state.stream.getTracks().forEach(t=>t.stop());state.stream=null}$('camera').srcObject=null;$('cameraBtn').textContent=state.videoURL?'Video Loaded':'Start Camera';$('cameraStatus').textContent=state.videoURL?'Video file input':'Camera idle';stopInference();}
 function startExperiment(){state.running=true;state.current=0;state.skipped=false;$('startBtn').textContent='⏭ Confirm / Next Step';$('systemPill').innerHTML='<i></i> EXPERIMENT ACTIVE';$('recordStatus').textContent='MONITORING';log('Experiment EXP-DEMO-001 started');log(`EXPECTED STEP 1 — ${STEPS[0].name}`,'warn');updateUI();if(state.videoURL){state.inputMode='video';$('cameraPlaceholder').style.display='none';connectBackend();const v=$('camera');v.play().then(()=>log('Loaded video playback active — frames sent to Edge AI')).catch(()=>log('Video playback blocked until Play is pressed','warn'));}else if(!state.stream)startCamera();}
