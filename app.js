@@ -43,7 +43,9 @@ try{
 // When the dashboard is served by FastAPI on localhost, use the same origin.
 // When it is opened from GitHub Pages, fall back to the local edge backend.
 const storedApi=localStorage.getItem('SPACE_AI_API');
-const API_BASE=storedApi || (location.hostname==='localhost'||location.hostname==='127.0.0.1' ? location.origin : 'http://localhost:8000');
+const configuredApi=window.SPACE_AI_API || '';
+const RENDER_API='https://ai-human-activity-recognition-api.onrender.com';
+const API_BASE=(storedApi || configuredApi || (location.hostname==='localhost'||location.hostname==='127.0.0.1' ? location.origin : RENDER_API)).replace(/\\/$/,'');
 const WS_URL=API_BASE.replace(/^http/,'ws')+'/ws/inference';
 let state={current:-1,running:false,skipped:false,stream:null,videoURL:null,events:[],ws:null,inferenceTimer:null,lastResult:null,inputMode:null};
 const $=id=>document.getElementById(id);
