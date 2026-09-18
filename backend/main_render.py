@@ -72,3 +72,4 @@ async def inference_socket(websocket:WebSocket):
 if __name__=="__main__":
     import uvicorn
     uvicorn.run("main_render:app",host="0.0.0.0",port=int(os.getenv("PORT","10000")))
+\n\n@app.get("/")\ndef root():\n    return {"status": "ok", "service": "AI Human Activity Recognition API"}\n
