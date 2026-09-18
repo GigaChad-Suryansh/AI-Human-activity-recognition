@@ -1,3 +1,5 @@
+let state={current:-1,running:false,skipped:false,stream:null,videoURL:null,events:[],ws:null,inferenceTimer:null,lastResult:null,inputMode:null};
+
 let STEPS=[
   {name:'Pick up container',interaction:'Hand → Container'},
   {name:'Open container',interaction:'Hand → Container'},
@@ -47,7 +49,6 @@ const configuredApi=window.SPACE_AI_API || '';
 const RENDER_API='https://ai-human-activity-recognition-api.onrender.com';
 const API_BASE=(storedApi || configuredApi || (location.hostname==='localhost'||location.hostname==='127.0.0.1' ? location.origin : RENDER_API)).replace(/\\/$/,'');
 const WS_URL=API_BASE.replace(/^http/,'ws')+'/ws/inference';
-let state={current:-1,running:false,skipped:false,stream:null,videoURL:null,events:[],ws:null,inferenceTimer:null,lastResult:null,inputMode:null};
 const $=id=>document.getElementById(id);
 function now(){return new Date().toLocaleTimeString([], {hour12:false});}
 function escapeHtml(s){return String(s).replace(/[&<>\"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;',"'":'&#039;'}[c]));}
