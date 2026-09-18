@@ -1,4 +1,4 @@
-const STEPS=[
+let STEPS=[
   {name:'Pick up container',interaction:'Hand → Container'},
   {name:'Open container',interaction:'Hand → Container'},
   {name:'Insert tool',interaction:'Hand → Tool'},
@@ -6,6 +6,39 @@ const STEPS=[
   {name:'Close container',interaction:'Hand → Container'},
   {name:'Place container back',interaction:'Hand → Rack'}
 ];
+
+function applyExperiment(exp){
+  if(!exp||!Array.isArray(exp.steps)||!exp.steps.length)return;
+  STEPS=exp.steps.map(s=>({
+    name:typeof s==='string'?s:s.name,
+    interaction:s.interaction||(s.objects&&s.objects.length?s.objects.join(' → '):'Hand → Object')
+  }));
+  if(state.current<0){
+    const nextEl=$('nextStep');
+    if(nextEl)nextEl.textContent=STEPS[0]?.name||'Start experiment';
+  }
+  renderSteps();
+  const select=$('trainingLabel');
+  if(select){
+    select.innerHTML=STEPS.map(s=>`<option value="${escapeHtml(s.name)}">${escapeHtml(s.name)}</option>`).join('');
+  }
+  log(`Experiment activated: ${exp.name} (${STEPS.length} steps)`);
+}
+
+window.addEventListener('spaceai:experiment-loaded',e=>{
+  if(e.detail)applyExperiment(e.detail);
+});
+
+try{
+  const activeExp=localStorage.getItem('SPACE_AI_ACTIVE_EXPERIMENT');
+  if(activeExp){
+    const parsed=JSON.parse(activeExp);
+    if(parsed&&Array.isArray(parsed.steps)&&parsed.steps.length){
+      applyExperiment(parsed);
+    }
+  }
+}catch(e){}
+
 
 // When the dashboard is served by FastAPI on localhost, use the same origin.
 // When it is opened from GitHub Pages, fall back to the local edge backend.

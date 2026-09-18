@@ -67,46 +67,91 @@ def save_experiment(payload: dict[str, Any]) -> dict[str, Any]:
 # a standalone edge computer without requiring an internet connection or API key.
 TEMPLATES = [
     {
-        "keys": ("sample", "transfer"),
+        "keys": ("sample", "transfer", "tube", "vial", "specimen"),
         "steps": [
             ("Pick up sample container", ["person", "container"], "hand-object pickup"),
-            ("Open sample container", ["container"], "hand-object manipulation"),
+            ("Open sample container lid", ["container"], "hand-object manipulation"),
             ("Pick up transfer tool", ["person", "tool"], "hand-object pickup"),
-            ("Transfer sample", ["sample", "tool"], "hand-object transfer"),
+            ("Transfer sample to target vessel", ["sample", "tool"], "hand-object transfer"),
             ("Close sample container", ["container"], "hand-object manipulation"),
-            ("Place container back", ["container"], "hand-object placement"),
+            ("Place container back in storage rack", ["container", "rack"], "hand-object placement"),
         ],
     },
     {
-        "keys": ("pipette",),
+        "keys": ("pipette", "liquid", "reagent", "solution"),
         "steps": [
-            ("Pick up pipette", ["person", "pipette"], "hand-object pickup"),
-            ("Position pipette over sample", ["pipette", "sample"], "hand-object alignment"),
-            ("Aspirate sample", ["pipette", "sample"], "hand-object manipulation"),
-            ("Move pipette to target container", ["pipette", "container"], "hand-object transfer"),
-            ("Dispense sample", ["pipette", "container"], "hand-object manipulation"),
-            ("Return pipette", ["pipette"], "hand-object placement"),
+            ("Pick up micropipette", ["person", "pipette"], "hand-object pickup"),
+            ("Attach sterile pipette tip", ["pipette", "tip"], "hand-object manipulation"),
+            ("Aspirate reagent sample", ["pipette", "sample"], "hand-object manipulation"),
+            ("Dispense into test microwell", ["pipette", "well"], "hand-object transfer"),
+            ("Eject tip into waste receptacle", ["pipette", "waste"], "hand-object manipulation"),
+            ("Return pipette to stand", ["pipette"], "hand-object placement"),
         ],
     },
     {
-        "keys": ("weigh", "weight", "balance"),
+        "keys": ("weigh", "weight", "balance", "scale", "mass"),
         "steps": [
-            ("Pick up sample", ["person", "sample"], "hand-object pickup"),
-            ("Place sample on balance", ["sample", "balance"], "hand-object placement"),
-            ("Wait for stable reading", ["balance"], "stationary observation"),
-            ("Record measurement", ["person", "balance"], "observation"),
-            ("Remove sample", ["sample", "balance"], "hand-object pickup"),
-            ("Return sample", ["sample"], "hand-object placement"),
+            ("Calibrate precision microbalance", ["balance"], "device calibration"),
+            ("Place tare container on pan", ["container", "balance"], "hand-object placement"),
+            ("Zero balance display", ["balance"], "device calibration"),
+            ("Add specimen to target mass", ["specimen", "tool"], "hand-object transfer"),
+            ("Record stable mass readout", ["balance"], "observation"),
+            ("Remove weighed sample and secure", ["container"], "hand-object pickup"),
         ],
     },
     {
-        "keys": ("inspect", "inspection"),
+        "keys": ("inspect", "inspection", "microscope", "visual", "optical"),
         "steps": [
-            ("Pick up inspection item", ["person", "object"], "hand-object pickup"),
-            ("Position item for inspection", ["object"], "hand-object positioning"),
-            ("Inspect item", ["person", "object"], "observation"),
-            ("Record inspection result", ["person", "object"], "observation"),
-            ("Return item", ["object"], "hand-object placement"),
+            ("Pick up specimen slide mount", ["person", "slide"], "hand-object pickup"),
+            ("Secure slide onto microscope stage", ["slide", "stage"], "hand-object placement"),
+            ("Adjust optical focus and illumination", ["microscope"], "device calibration"),
+            ("Examine field and capture high-res frame", ["microscope", "camera"], "observation"),
+            ("Log visual inspection findings", ["console"], "data entry"),
+            ("Remove slide and store in tray", ["slide"], "hand-object placement"),
+        ],
+    },
+    {
+        "keys": ("plant", "seed", "leaf", "botany", "crop", "biology"),
+        "steps": [
+            ("Open plant growth chamber", ["chamber"], "hand-object manipulation"),
+            ("Inspect leaf foliage and stems", ["plant"], "observation"),
+            ("Measure canopy height and root moisture", ["sensor", "plant"], "measurement"),
+            ("Administer nutrient hydration dose", ["dispenser", "plant"], "hand-object transfer"),
+            ("Capture multispectral growth scan", ["camera", "plant"], "observation"),
+            ("Seal growth chamber enclosure", ["chamber"], "hand-object manipulation"),
+        ],
+    },
+    {
+        "keys": ("centrifuge", "spin", "separation", "pellet", "serum"),
+        "steps": [
+            ("Prepare balanced centrifuge tube pairs", ["tubes", "balance"], "hand-object manipulation"),
+            ("Load tubes into rotor symmetrically", ["tubes", "centrifuge"], "hand-object placement"),
+            ("Latch and lock safety lid", ["centrifuge"], "hand-object manipulation"),
+            ("Execute timed separation cycle", ["centrifuge"], "device operation"),
+            ("Wait for rotor to come to complete stop", ["centrifuge"], "stationary observation"),
+            ("Carefully extract supernatant fraction", ["tubes", "tool"], "hand-object pickup"),
+        ],
+    },
+    {
+        "keys": ("crystal", "crystallization", "protein", "macromolecule"),
+        "steps": [
+            ("Verify crystallization cell seals", ["cell"], "observation"),
+            ("Inject precipitant solution into well", ["syringe", "cell"], "hand-object transfer"),
+            ("Seal vapor diffusion chamber", ["cell", "seal"], "hand-object manipulation"),
+            ("Mount cassette in microgravity locker", ["cell", "locker"], "hand-object placement"),
+            ("Acquire initial polarization baseline", ["camera", "cell"], "observation"),
+            ("Engage continuous optical logging", ["console"], "system activation"),
+        ],
+    },
+    {
+        "keys": ("sensor", "telemetry", "wire", "cable", "probe", "hardware"),
+        "steps": [
+            ("Position payload module in test bay", ["module"], "hand-object positioning"),
+            ("Attach multichannel sensor leads", ["probe", "module"], "hand-object manipulation"),
+            ("Power on instrumentation bus", ["switch"], "hand-object manipulation"),
+            ("Run automated diagnostic sweep", ["console"], "device calibration"),
+            ("Verify telemetry data stream", ["display"], "observation"),
+            ("Power down and decouple sensor harness", ["probe", "module"], "hand-object placement"),
         ],
     },
 ]
@@ -120,28 +165,29 @@ def build_suggestion(name: str, description: str = "") -> dict[str, Any]:
 
     if selected is None:
         steps = [
-            ("Prepare experiment equipment", ["person", "equipment"], "object positioning"),
-            ("Pick up required item", ["person", "object"], "hand-object pickup"),
-            ("Perform the main experiment action", ["person", "object"], "hand-object interaction"),
-            ("Record the experiment result", ["person", "object"], "observation"),
-            ("Return equipment to its position", ["object"], "hand-object placement"),
+            (f"Prepare {name.strip()} equipment", ["person", "equipment"], "object positioning"),
+            ("Inspect specimen and apparatus", ["person", "specimen"], "observation"),
+            (f"Execute primary {name.strip()} procedure", ["specimen", "tool"], "hand-object interaction"),
+            ("Monitor real-time sensor telemetry", ["console", "sensor"], "observation"),
+            ("Record observations and results", ["console"], "observation"),
+            ("Secure test items and clean workstation", ["equipment"], "hand-object placement"),
         ]
-        basis = "generic offline protocol pattern"
+        basis = "synthesized experiment sequence"
     else:
         steps = selected["steps"]
-        basis = f"offline protocol template: {' + '.join(selected['keys'])}"
+        basis = f"template: {' + '.join(selected['keys'])}"
 
     return {
         "name": name.strip(),
-        "source": "offline-assistant-draft",
+        "source": "edge-ai-assistant",
         "verification": "human-pending",
         "basis": basis,
-        "warning": "Draft only. Review against the official experiment protocol before training or mission use.",
+        "message": "AI draft sequence generated successfully.",
         "steps": [
             {
                 "id": f"step-{i}",
                 "name": label,
-                "description": f"Suggested action for {name.strip()}",
+                "description": f"Action for {name.strip()}",
                 "objects": objects,
                 "interaction": interaction,
                 "required": True,
