@@ -3,7 +3,7 @@ ENV PYTHONDONTWRITEBYTECODE=1 PIP_NO_CACHE_DIR=1
 WORKDIR /build
 RUN apt-get update && apt-get install -y --no-install-recommends libglib2.0-0 libgl1 && rm -rf /var/lib/apt/lists/*
 COPY backend/requirements.txt /build/requirements.txt
-RUN pip install --no-cache-dir -r /build/requirements.txt onnx>=1.16,<2
+RUN pip install --no-cache-dir -r /build/requirements.txt "onnx>=1.16,<2"
 RUN python - <<'PY'
 from pathlib import Path
 from ultralytics import YOLO
