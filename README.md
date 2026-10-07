@@ -1,6 +1,7 @@
 # Space Experiment AI
 
 SIH prototype for offline Human Activity Recognition and experiment-sequence validation.
+https://gigachad-suryansh.github.io/AI-Human-activity-recognition/
 
 ## What is working now
 
