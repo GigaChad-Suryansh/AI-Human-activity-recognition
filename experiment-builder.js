@@ -5,7 +5,7 @@
 (() => {
   const isHttp = location.protocol.startsWith('http');
   const isLocal = isHttp && (location.hostname === 'localhost' || location.hostname === '127.0.0.1');
-  const API = window.SPACE_AI_API || (isLocal ? location.origin : 'http://localhost:8000');
+  const API = window.SPACE_AI_API || (isLocal ? location.origin : 'https://ai-human-activity-recognition-api.onrender.com');
 
   const steps = [];
   const $ = id => document.getElementById(id);
